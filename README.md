@@ -2,7 +2,7 @@
 
 Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & auto RUN*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/SNBT/TKA) secara massal dan simultan melalui cloud dashboard **Action1 RMM**.
 
-> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **200 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
+> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **100 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
 
 ---
 
@@ -13,14 +13,21 @@ Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai u
    * [1. Pendaftaran Akun](#1-pendaftaran-akun)
    * [2. Unduh Installer Agent](#2-unduh-installer-agent)
    * [3. Instalasi Agent di PC Klien Lab](#3-instalasi-agent-di-pc-klien-lab)
+     * [Opsi A: Instalasi 1-Klik via Flashdisk (Batch Script)](#opsi-a-instalasi-1-klik-via-flashdisk-batch-script)
+     * [Opsi B: Deploy via PSEXEC (Jaringan Lokal)](#opsi-b-deploy-via-psexec-jaringan-lokal)
+     * [Opsi C: Active Directory (Group Policy / GPO)](#opsi-c-active-directory-group-policy--gpo)
    * [4. Pengelompokan Klien (Endpoint Group)](#4-pengelompokan-klien-endpoint-group)
 3. [Konfigurasi Direktori (Wajib untuk Publik)](#-konfigurasi-direktori-wajib-untuk-publik)
 4. [Skrip Otomasi](#-skrip-otomasi)
    * [Skrip 1: Buka & Auto-RUN ExamBrowser](#skrip-1-buka--auto-run-exambrowser)
    * [Skrip 2: Tutup Aman ExamBrowser (Ctrl+C+B)](#skrip-2-tutup-aman-exambrowser-ctrlcb)
 5. [Cara Eksekusi Massal dari Dashboard](#-cara-eksekusi-massal-dari-dashboard)
-6. [Tabel Troubleshooting](#-troubleshooting)
-7. [Lisensi](#-lisensi)
+6. [Bonus: Skrip Shutdown Massal Klien Lab via Action1](#-bonus-skrip-shutdown-massal-klien-lab-via-action1)
+   * [1. Skrip PowerShell: Shutdown dengan Peringatan 30 Detik](#1-skrip-powershell-shutdown-dengan-peringatan-30-detik)
+   * [2. Skrip Pembatalan: Cancel Shutdown](#2-skrip-pembatalan-cancel-shutdown-jika-salah-eksekusi)
+   * [3. Cara Penggunaan di Dashboard Action1](#3-cara-penggunaan-di-dashboard-action1)
+7. [Troubleshooting](#-troubleshooting)
+8. [Lisensi](#-lisensi)
 
 ---
 
@@ -54,12 +61,11 @@ Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai u
 
 Pilih salah satu metode berikut sesuai sarana lab Anda:
 
-#### Opsi A: Instalasi Manual / Silent via CMD (Cocok pakai Flashdisk)
-### 💡 Metode Praktis: Instalasi 1-Klik via Flashdisk (Batch Script)
+#### Opsi A: Instalasi 1-Klik via Flashdisk (Batch Script)
 
 Untuk mempercepat instalasi pada puluhan PC tanpa perlu membuka Command Prompt (CMD) manual di tiap komputer, gunakan file launcher `.bat` dengan auto-elevation administrator.
 
-#### 1. Persiapan File di Flashdisk
+##### 1. Persiapan File di Flashdisk
 Simpan file `action1_agent.msi` dan buat file baru bernama `INSTALL_ACTION1.bat` di direktori yang sama (misal di root flashdisk):
 
 ```
@@ -68,7 +74,7 @@ Simpan file `action1_agent.msi` dan buat file baru bernama `INSTALL_ACTION1.bat`
 └── ⚙️ INSTALL_ACTION1.bat
 ```
 
-#### 2. Isi Skrip `INSTALL_ACTION1.bat`
+##### 2. Isi Skrip `INSTALL_ACTION1.bat`
 Salin kode berikut ke dalam file `INSTALL_ACTION1.bat`:
 
 ```bat
@@ -104,7 +110,7 @@ timeout /t 3 >nul
 exit
 ```
 
-#### 3. Cara Penggunaan di PC Klien Lab
+##### 3. Cara Penggunaan di PC Klien Lab
 1. Tancapkan flashdisk ke PC klien yang menyala.
 2. Buka isi flashdisk, lalu **klik ganda (double-click)** pada file `INSTALL_ACTION1.bat`.
 3. Klik **Yes** pada jendela konfirmasi User Account Control (UAC).
@@ -352,11 +358,10 @@ Write-Output "Ctrl+C+B dikirim ke sesi $User"
    * Hasil sukses tutup: `Ctrl+C+B dikirim ke sesi [NamaUser]`
 
 ---
+
 ## 🎁 Bonus: Skrip Shutdown Massal Klien Lab via Action1
 
 Setelah sesi ujian berakhir dan aplikasi ExamBrowser ditutup, Anda dapat mematikan seluruh PC klien lab secara serempak langsung dari dashboard Action1 dengan dialog peringatan hitung mundur (*countdown*).
-
----
 
 ### 1. Skrip PowerShell: Shutdown dengan Peringatan 30 Detik
 
@@ -375,8 +380,6 @@ shutdown.exe /s /f /t 30 /c $msg
 Write-Output "Perintah shutdown hitung mundur 30 detik berhasil dikirim."
 ```
 
----
-
 ### 2. Skrip Pembatalan: Cancel Shutdown (Jika Salah Eksekusi)
 
 Jika sewaktu-waktu Anda tidak sengaja mengirim perintah shutdown atau perlu menundanya, buat skrip darurat di Action1 dengan nama `Cancel Shutdown`:
@@ -388,8 +391,6 @@ shutdown.exe /a
 Write-Output "Perintah shutdown berhasil dibatalkan."
 ```
 
----
-
 ### 3. Cara Penggunaan di Dashboard Action1
 
 1. Masuk ke menu **Endpoints** atau **Groups**.
@@ -398,6 +399,7 @@ Write-Output "Perintah shutdown berhasil dibatalkan."
 4. Pilih skrip `Shutdown Lab Client with Warning`, lalu klik **Run Now**.
 5. Di layar monitor seluruh siswa/klien akan muncul dialog bawaan Windows dengan pesan peringatan dan hitung mundur sebelum PC mati otomatis.
 
+---
 
 ## ❓ Troubleshooting
 
