@@ -55,11 +55,60 @@ Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai u
 Pilih salah satu metode berikut sesuai sarana lab Anda:
 
 #### Opsi A: Instalasi Manual / Silent via CMD (Cocok pakai Flashdisk)
-Buka Command Prompt sebagai **Administrator** di PC klien, lalu jalankan:
-```cmd
-msiexec /i action1_agent.msi /qn
+### 💡 Metode Praktis: Instalasi 1-Klik via Flashdisk (Batch Script)
+
+Untuk mempercepat instalasi pada puluhan PC tanpa perlu membuka Command Prompt (CMD) manual di tiap komputer, gunakan file launcher `.bat` dengan auto-elevation administrator.
+
+#### 1. Persiapan File di Flashdisk
+Simpan file `action1_agent.msi` dan buat file baru bernama `INSTALL_ACTION1.bat` di direktori yang sama (misal di root flashdisk):
+
 ```
-> Opsi `/qn` menjalankan instalasi di latar belakang (*silent install*) tanpa jendela konfirmasi tambahan.
+📁 FLASHDISK (D:)
+├── 📄 action1_agent.msi
+└── ⚙️ INSTALL_ACTION1.bat
+```
+
+#### 2. Isi Skrip `INSTALL_ACTION1.bat`
+Salin kode berikut ke dalam file `INSTALL_ACTION1.bat`:
+
+```bat
+@echo off
+:: Otomatis meminta hak akses Administrator (UAC Prompt) jika belum Run as Admin
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
+:: Pindah ke direktori tempat file BAT ini berada di flashdisk
+cd /d "%~dp0"
+
+echo [1/2] Menginstall Action1 Agent secara latar belakang (silent)...
+msiexec /i action1_agent.msi /qn
+
+echo [2/2] Menunggu verifikasi service Windows...
+timeout /t 5 /nobreak >nul
+
+sc query "Action1 Agent" | find "RUNNING" >nul
+if %errorLevel% equ 0 (
+    echo.
+    echo ==============================================
+    echo SUKSES: Action1 Agent berhasil terpasang dan aktif!
+    echo ==============================================
+) else (
+    echo.
+    echo Instalasi selesai, service sedang sinkronisasi ke cloud Action1.
+)
+
+timeout /t 3 >nul
+exit
+```
+
+#### 3. Cara Penggunaan di PC Klien Lab
+1. Tancapkan flashdisk ke PC klien yang menyala.
+2. Buka isi flashdisk, lalu **klik ganda (double-click)** pada file `INSTALL_ACTION1.bat`.
+3. Klik **Yes** pada jendela konfirmasi User Account Control (UAC).
+4. Skrip akan langsung memasang agent secara hening di latar belakang, memverifikasi status servicenya, lalu jendela konsol tertutup sendiri dalam 3 detik.
 
 #### Opsi B: Deploy via PSEXEC (Jaringan Lokal)
 Jika lab memiliki koneksi LAN dengan kredensial administrator lokal yang sama:
