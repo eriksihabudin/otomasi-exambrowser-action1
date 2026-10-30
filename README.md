@@ -352,6 +352,52 @@ Write-Output "Ctrl+C+B dikirim ke sesi $User"
    * Hasil sukses tutup: `Ctrl+C+B dikirim ke sesi [NamaUser]`
 
 ---
+## 🎁 Bonus: Skrip Shutdown Massal Klien Lab via Action1
+
+Setelah sesi ujian berakhir dan aplikasi ExamBrowser ditutup, Anda dapat mematikan seluruh PC klien lab secara serempak langsung dari dashboard Action1 dengan dialog peringatan hitung mundur (*countdown*).
+
+---
+
+### 1. Skrip PowerShell: Shutdown dengan Peringatan 30 Detik
+
+Daftarkan skrip berikut di Action1 melalui menu **Automation** > **Custom Scripts** dengan nama `Shutdown Lab Client with Warning`:
+
+```powershell
+# Parameter shutdown Windows:
+# /s : Mematikan komputer (shutdown)
+# /f : Memaksa aplikasi tertutup tanpa menunggu konfirmasi (force)
+# /t 30 : Waktu jeda hitung mundur 30 detik
+# /c : Pesan dialog yang muncul di layar monitor klien
+
+$msg = "Perhatian: Komputer akan dimatikan dalam 30 detik. Silakan simpan pekerjaan Anda!"
+shutdown.exe /s /f /t 30 /c $msg
+
+Write-Output "Perintah shutdown hitung mundur 30 detik berhasil dikirim."
+```
+
+---
+
+### 2. Skrip Pembatalan: Cancel Shutdown (Jika Salah Eksekusi)
+
+Jika sewaktu-waktu Anda tidak sengaja mengirim perintah shutdown atau perlu menundanya, buat skrip darurat di Action1 dengan nama `Cancel Shutdown`:
+
+```powershell
+# Membatalkan proses shutdown yang sedang hitung mundur
+shutdown.exe /a
+
+Write-Output "Perintah shutdown berhasil dibatalkan."
+```
+
+---
+
+### 3. Cara Penggunaan di Dashboard Action1
+
+1. Masuk ke menu **Endpoints** atau **Groups**.
+2. Centang grup PC lab yang dituju (misal: `Lab Komputer - Klien Ujian`).
+3. Klik tombol **Run Action** di bar atas > pilih **Run Script**.
+4. Pilih skrip `Shutdown Lab Client with Warning`, lalu klik **Run Now**.
+5. Di layar monitor seluruh siswa/klien akan muncul dialog bawaan Windows dengan pesan peringatan dan hitung mundur sebelum PC mati otomatis.
+
 
 ## ❓ Troubleshooting
 
