@@ -1,6 +1,6 @@
 # 🚀 Panduan Automasi ExamBrowser Menggunakan Action1 RMM
 
-Repositori/panduan ini berisi kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & run*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT) secara massal melalui dashboard **Action1**.
+Repositori/panduan ini berisi kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & run*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/TKA) secara massal melalui dashboard **Action1**.
 
 ---
 
