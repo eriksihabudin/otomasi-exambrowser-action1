@@ -1,34 +1,90 @@
-# 🚀 Panduan Automasi ExamBrowser Menggunakan Action1 RMM
+# 🚀 Otomasi Remote ExamBrowser Client via Action1 RMM
 
-Repositori/panduan ini berisi kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & run*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/TKA) secara massal melalui dashboard **Action1**.
+Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & auto RUN*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/SNBT) secara massal dan simultan melalui cloud dashboard **Action1 RMM**.
 
----
-
-## 📌 Ringkasan Fitur
-
-1. **Buka & Otomatisasi Tombol RUN (`OpenExamBrowser.ps1`)**:
-   - Mendeteksi user Windows yang sedang login (interaktif).
-   - Menjalankan file executable `ExamBrowser.exe`.
-   - Mengabaikan/menekan konfirmasi dialog (seperti notifikasi *autoupdate*).
-   - Mengklik tombol **RUN** otomatis via UI Automation & simulasi koordinat klik.
-   - Dapat disesuaikan foldernya oleh publik.
-2. **Keluar / Tutup Aman (`CloseExamBrowser.ps1`)**:
-   - Membawa jendela ExamBrowser ke latar depan (*foreground*).
-   - Mengirim kombinasi tombol standar `Ctrl + C + B` untuk keluar secara normal tanpa *force kill* yang merusak sesi ujian.
+> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **100 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
 
 ---
 
-## ⚙️ Prasyarat (Prerequisites)
+## 📑 Daftar Isi
 
-- Endpoint klien Windows 10/11 terhubung ke **Action1 Agent**.
-- Pengguna/Siswa sudah login ke Windows desktop (karena UI Automation membutuhkan sesi interaktif pengguna).
-- Hak akses Administrator di dashboard Action1.
+1. [Fitur Utama](#-fitur-utama)
+2. [Setup Action1 (Akun & Agen)](#-setup-action1-akun--agen)
+   * [1. Pendaftaran Akun](#1-pendaftaran-akun)
+   * [2. Unduh Installer Agent](#2-unduh-installer-agent)
+   * [3. Instalasi Agent di PC Klien Lab](#3-instalasi-agent-di-pc-klien-lab)
+   * [4. Pengelompokan Klien (Endpoint Group)](#4-pengelompokan-klien-endpoint-group)
+3. [Konfigurasi Direktori (Wajib untuk Publik)](#-konfigurasi-direktori-wajib-untuk-publik)
+4. [Skrip Otomasi](#-skrip-otomasi)
+   * [Skrip 1: Buka & Auto-RUN ExamBrowser](#skrip-1-buka--auto-run-exambrowser)
+   * [Skrip 2: Tutup Aman ExamBrowser (Ctrl+C+B)](#skrip-2-tutup-aman-exambrowser-ctrlcb)
+5. [Cara Eksekusi Massal dari Dashboard](#-cara-eksekusi-massal-dari-dashboard)
+6. [Tabel Troubleshooting](#-troubleshooting)
+7. [Lisensi](#-lisensi)
 
 ---
 
-## 🛠️ Persiapan & Kustomisasi Direktori (Wajib Dibaca)
+## 📌 Fitur Utama
 
-Sebelum mendistribusikan skrip pembuka, pastikan publik/admin lab menyesuaikan path direktori aplikasi di bagian **paling atas** skrip `OpenExamBrowser.ps1`:
+* **Otomasi Klik RUN Tanpa Campur Tangan Siswa:** Membuka `ExamBrowser.exe`, menekan tombol konfirmasi update jika muncul, dan otomatis mengklik tombol **RUN** via UI Automation & simulasi koordinat.
+* **Kustomisasi Direktori Publik:** Variabel path terisolasi di baris teratas, memudahkan admin lab mana pun untuk menyesuaikan lokasi file di komputer mereka.
+* **Sesi Interaktif Pengguna:** Skrip dijalankan di dalam sesi desktop pengguna aktif menggunakan *Scheduled Task helper*, sehingga antarmuka ExamBrowser tampil di layar siswa.
+* **Tutup Aman (Graceful Exit):** Mengirim kombinasi tombol standar `Ctrl + C + B` untuk menutup sesi ujian secara resmi tanpa merusak data sesi atau mematikan paksa (*force kill*).
+
+---
+
+## 🛠️ Setup Action1 (Akun & Agen)
+
+### 1. Pendaftaran Akun
+1. Buka laman resmi [Action1 Sign Up](https://www.action1.com/signup/).
+2. Isi formulir pendaftaran:
+   * **Work Email**: Masukkan email aktif (email instansi atau domain organisasi).
+   * **Organization Name**: Nama sekolah, universitas, atau lab komputer.
+   * **Region Data Storage**: Pilih wilayah server terdekat (misal: *Europe/Germany* atau *US*).
+3. Buka email verifikasi, klik tautan aktivasi, lalu buat kata sandi akun Anda.
+4. Aktifkan **Two-Factor Authentication (2FA)** untuk mengamankan akses ke dashboard.
+
+### 2. Unduh Installer Agent
+1. Masuk ke dashboard Action1.
+2. Di panel navigasi sebelah kiri, buka menu **Endpoints**.
+3. Klik tombol **Add Endpoints** di kanan atas.
+4. Pilih **Download Agent Installer (.msi / .exe)**. File installer ini sudah otomatis dipasangi token organisasi Anda (*pre-configured*).
+
+### 3. Instalasi Agent di PC Klien Lab
+
+Pilih salah satu metode berikut sesuai sarana lab Anda:
+
+#### Opsi A: Instalasi Manual / Silent via CMD (Cocok pakai Flashdisk)
+Buka Command Prompt sebagai **Administrator** di PC klien, lalu jalankan:
+```cmd
+msiexec /i action1_agent.msi /qn
+```
+> Opsi `/qn` menjalankan instalasi di latar belakang (*silent install*) tanpa jendela konfirmasi tambahan.
+
+#### Opsi B: Deploy via PSEXEC (Jaringan Lokal)
+Jika lab memiliki koneksi LAN dengan kredensial administrator lokal yang sama:
+```powershell
+psexec.exe \\CLIENT-01 -u Administrator -p PasswordLab -c action1_agent.msi msiexec /i action1_agent.msi /qn
+```
+
+#### Opsi C: Active Directory (Group Policy / GPO)
+Jika komputer lab terhubung ke domain Windows Server:
+1. Simpan `action1_agent.msi` pada folder network share (misal: `\\SERVER\Deploy$`).
+2. Buka **Group Policy Management** > buat GPO baru.
+3. Masuk ke **Computer Configuration** > **Policies** > **Software Settings** > **Software installation**.
+4. Tambahkan package `.msi` tersebut agar terpasang otomatis saat komputer menyala (*startup*).
+
+### 4. Pengelompokan Klien (Endpoint Group)
+1. Setelah agen terpasang, pastikan PC muncul di menu **Endpoints** dengan status **Online** (hijau).
+2. Masuk ke menu **Groups** > klik **+ Add Group**.
+3. Beri nama grup, misalnya `Lab Komputer - Klien Ujian`.
+4. Masukkan seluruh PC peserta ujian ke dalam grup ini agar memudahkan pengiriman instruksi sekaligus.
+
+---
+
+## ⚙️ Konfigurasi Direktori (Wajib untuk Publik)
+
+Sebelum menggunakan skrip pembuka, publik/admin lab wajib menyesuaikan path direktori aplikasi di bagian konfigurasi paling atas:
 
 ```powershell
 # ==========================================
@@ -39,26 +95,16 @@ $SearchDir = 'C:\Laboran Lab. DKV'                     # Folder root pencarian j
 # ==========================================
 ```
 
-> **Catatan:**
-> - `$Dir`: Alamat absolut tempat folder ExamBrowser Client diekstrak.
-> - `$SearchDir`: Folder induk untuk pencarian darurat jika folder utama bergeser atau berbeda nama subfolder.
+* `$Dir`: Alamat absolut tempat folder aplikasi `ExamBrowser.exe` diekstrak.
+* `$SearchDir`: Folder induk yang akan dipindai secara rekursif jika file tidak ditemukan di `$Dir`.
 
 ---
 
-## 📋 Langkah-Langkah Deploy di Action1
+## 📜 Skrip Otomasi
 
-### Langkah 1: Buat Script "Jalankan ExamBrowser"
+### Skrip 1: Buka & Auto-RUN ExamBrowser
 
-1. Masuk ke dashboard **Action1**.
-2. Buka menu **Automation** > **Custom Scripts** (atau via **Run PowerShell Script**).
-3. Klik **+ Add Script**.
-4. Isi detail:
-   - **Name**: `Launch and Run ExamBrowser`
-   - **Description**: `Membuka ExamBrowser dan otomatis klik RUN di sesi user yang aktif`
-5. Salin dan tempel kode berikut:
-
-<details>
-<summary>▶ Klik untuk melihat skrip Jalankan ExamBrowser</summary>
+Daftarkan skrip ini di Action1 pada menu **Automation** > **Custom Scripts** dengan nama `Launch and Run ExamBrowser`.
 
 ```powershell
 # ==========================================
@@ -151,7 +197,7 @@ function Click-Run($tries) {
                 return $true
             }
         }
-        # Cadangan jika tombol tidak terbaca UIA
+        # Cadangan: jika tombol belum terbaca UIA, klik area bawah jendela
         if ($tries -ge 10) {
             $r = $w.Current.BoundingRectangle
             [W]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height * 0.90))
@@ -184,20 +230,11 @@ Start-ScheduledTask -TaskName $Task
 Write-Output "ExamBrowser dijalankan untuk $User"
 ```
 
-</details>
-
 ---
 
-### Langkah 2: Buat Script "Tutup ExamBrowser (Ctrl+C+B)"
+### Skrip 2: Tutup Aman ExamBrowser (Ctrl+C+B)
 
-1. Di menu **Custom Scripts**, klik **+ Add Script**.
-2. Isi detail:
-   - **Name**: `Close ExamBrowser (Ctrl+C+B)`
-   - **Description**: `Mengirim shortcut Ctrl+C+B secara interaktif ke jendela ExamBrowser`
-3. Salin dan tempel kode berikut:
-
-<details>
-<summary>▶ Klik untuk melihat skrip Tutup ExamBrowser</summary>
+Daftarkan skrip ini di menu **Automation** > **Custom Scripts** dengan nama `Close ExamBrowser (Ctrl+C+B)`.
 
 ```powershell
 $User = (Get-CimInstance Win32_ComputerSystem).UserName
@@ -218,7 +255,7 @@ public class K {
 }
 "@
 
-# Fokuskan jendela ExamBrowser (jika ada), lalu kirim Ctrl + C + B
+# Fokuskan jendela ExamBrowser (jika ada), lalu kirim kombinasi tombol Ctrl + C + B
 $p = Get-Process -Name 'ExamBrowser', 'runningexam' -ErrorAction SilentlyContinue |
      Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
 if ($p) {
@@ -227,7 +264,7 @@ if ($p) {
     Start-Sleep -Milliseconds 500
 }
 
-$keys = 0x11, 0x43, 0x42    # Virtual-Key codes: Ctrl, C, B
+$keys = 0x11, 0x43, 0x42    # Virtual Key Codes: Ctrl, C, B
 foreach ($k in $keys) { [K]::keybd_event($k, 0, 0, 0); Start-Sleep -Milliseconds 100 }
 Start-Sleep -Milliseconds 500
 [array]::Reverse($keys)
@@ -250,29 +287,34 @@ Unregister-ScheduledTask -TaskName $Task -Confirm:$false -ErrorAction SilentlyCo
 Write-Output "Ctrl+C+B dikirim ke sesi $User"
 ```
 
-</details>
-
 ---
 
-## 🚀 Cara Menjalankan ke Klien Lab
+## 🚀 Cara Eksekusi Massal dari Dashboard
 
-1. Dari dashboard Action1, masuk ke menu **Endpoints**.
-2. Pilih komputer lab target (atau pilih grup komputer lab).
-3. Klik tombol **Run Action** > **Run Script**.
-4. Pilih script:
-   - Pilih `Launch and Run ExamBrowser` saat ujian hendak dimulai.
-   - Pilih `Close ExamBrowser (Ctrl+C+B)` saat sesi ujian telah berakhir.
+1. Buka menu **Endpoints** atau **Groups** di dashboard Action1.
+2. Centang grup komputer target (misal: `Lab Komputer - Klien Ujian`).
+3. Klik tombol **Run Action** di bar atas > pilih **Run Script**.
+4. Pilih skrip yang dibutuhkan:
+   * **Saat Ujian Mulai**: Pilih `Launch and Run ExamBrowser`.
+   * **Saat Ujian Selesai**: Pilih `Close ExamBrowser (Ctrl+C+B)`.
 5. Klik **Run Now**.
-6. Pantau output status pada panel Action1:
-   - Output sukses buka: `ExamBrowser dijalankan untuk [NamaUser]`
-   - Output sukses tutup: `Ctrl+C+B dikirim ke sesi [NamaUser]`
+6. Pantau jendela status Action1:
+   * Hasil sukses buka: `ExamBrowser dijalankan untuk [NamaUser]`
+   * Hasil sukses tutup: `Ctrl+C+B dikirim ke sesi [NamaUser]`
 
 ---
 
 ## ❓ Troubleshooting
 
-| Gejala Masalah | Penyebab | Solusi |
-|---|---|---|
-| `Tidak ada user yang login` | Komputer klien masih berada di layar login Windows (Lock/Logoff). | Pastikan siswa/proktor sudah login ke desktop sebelum skrip dijalankan. |
-| `ExamBrowser.exe tidak ditemukan` | Folder penempatan aplikasi berbeda dengan isi variabel `$Dir` atau `$SearchDir`. | Pastikan path pada bagian konfigurasi script sudah sesuai dengan letak folder di komputer klien. |
-| Tombol RUN tidak terklik otomatis | Resolusi layar ekstrem atau UI lambat merender tombol. | Skrip memiliki toleransi tunggu hingga 180 detik dan otomatis melakukan klik koordinat cadangan di detik ke-10 ke atas. |
+| Gejala Masalah | Kemungkinan Penyebab | Solusi |
+| :--- | :--- | :--- |
+| `Tidak ada user yang login` | Komputer klien masih berada di layar Lock Screen atau belum login Windows. | Pastikan siswa/proktor sudah login desktop sebelum aksi dijalankan. |
+| `ExamBrowser.exe tidak ditemukan` | Folder aplikasi tidak sesuai dengan path yang didefinisikan. | Periksa letak folder di komputer klien dan sesuaikan variabel `$Dir` atau `$SearchDir` di skrip. |
+| Tombol RUN tidak terklik otomatis | UI ExamBrowser merender lambat atau terhalang dialog lain. | Skrip memiliki batas tunggu hingga 180 detik dan otomatis beralih ke simulasi koordinat klik di detik ke-10. |
+| Agent Action1 berstatus Offline | PC mati, jaringan LAN/internet lab putus, atau service terhenti. | Cek status service Windows `Action1 Agent` di client atau cek sambungan internet lab. |
+
+---
+
+## 📄 Lisensi
+
+Proyek ini didistribusikan di bawah lisensi **MIT License**. Silakan gunakan, modifikasi, dan bagikan secara bebas untuk kebutuhan laboratorium dan instansi pendidikan Anda.
