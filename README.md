@@ -2,7 +2,7 @@
 
 Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & auto RUN*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/SNBT/TKA) secara massal dan simultan melalui cloud dashboard **Action1 RMM**.
 
-> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **100 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
+> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **200 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
 
 ---
 
