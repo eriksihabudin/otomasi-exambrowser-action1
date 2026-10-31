@@ -2,7 +2,7 @@
 
 Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai untuk menjalankan (*start & auto RUN*) serta menutup (*graceful exit*) aplikasi **ExamBrowser Client** (ANBK/CBT/SNBT/TKA) secara massal dan simultan melalui cloud dashboard **Action1 RMM**.
 
-> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **200 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
+> **💡 Info Kuota Gratis:** Action1 menyediakan paket gratis permanen (*free tier*) hingga **100 endpoint/klien** dengan fitur lengkap, sangat ideal untuk kebutuhan laboratorium komputer sekolah maupun kampus.
 
 ---
 
@@ -19,7 +19,8 @@ Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai u
    * [4. Pengelompokan Klien (Endpoint Group)](#4-pengelompokan-klien-endpoint-group)
 3. [Konfigurasi Direktori (Wajib untuk Publik)](#-konfigurasi-direktori-wajib-untuk-publik)
 4. [Skrip Otomasi](#-skrip-otomasi)
-   * [Skrip 1: Buka & Auto-RUN ExamBrowser](#skrip-1-buka--auto-run-exambrowser)
+   * [Skrip 1A: Buka & Auto-RUN Standar (Tanpa Kamera)](#skrip-1a-buka--auto-run-standar-tanpa-kamera)
+   * [Skrip 1B: Buka & Auto-RUN Khusus Webcam / Kamera Aktif](#skrip-1b-buka--auto-run-khusus-webcam--kamera-aktif)
    * [Skrip 2: Tutup Aman ExamBrowser (Ctrl+C+B)](#skrip-2-tutup-aman-exambrowser-ctrlcb)
 5. [Cara Eksekusi Massal dari Dashboard](#-cara-eksekusi-massal-dari-dashboard)
 6. [Bonus: Skrip Shutdown Massal Klien Lab via Action1](#-bonus-skrip-shutdown-massal-klien-lab-via-action1)
@@ -34,6 +35,7 @@ Repositori ini berisi panduan lengkap dan kumpulan skrip PowerShell siap pakai u
 ## 📌 Fitur Utama
 
 * **Otomasi Klik RUN Tanpa Campur Tangan Siswa:** Membuka `ExamBrowser.exe`, menekan tombol konfirmasi update jika muncul, dan otomatis mengklik tombol **RUN** via UI Automation & simulasi koordinat.
+* **Dukungan Khusus Ujian Berkamera (Webcam Auto-Permission):** Mendeteksi ketersediaan webcam secara otomatis dan menyetujui pop-up dialog *"merekam aktifitas"* (Yes/Ya) tanpa perlu diklik manual oleh peserta.
 * **Kustomisasi Direktori Publik:** Variabel path terisolasi di baris teratas, memudahkan admin lab mana pun untuk menyesuaikan lokasi file di komputer mereka.
 * **Sesi Interaktif Pengguna:** Skrip dijalankan di dalam sesi desktop pengguna aktif menggunakan *Scheduled Task helper*, sehingga antarmuka ExamBrowser tampil di layar siswa.
 * **Tutup Aman (Graceful Exit):** Mengirim kombinasi tombol standar `Ctrl + C + B` untuk menutup sesi ujian secara resmi tanpa merusak data sesi atau mematikan paksa (*force kill*).
@@ -145,8 +147,8 @@ Sebelum menggunakan skrip pembuka, publik/admin lab wajib menyesuaikan path dire
 # ==========================================
 # KONFIGURASI DIREKTORI (SESUAIKAN DENGAN PC ANDA)
 # ==========================================
-$Dir       = 'C:\Laboran Lab. DKV\ExambrowserClient'   # Folder tempat ExamBrowser.exe berada
-$SearchDir = 'C:\Laboran Lab. DKV'                     # Folder root pencarian jika path utama tidak ditemukan
+$Dir       = 'C:\Path\Folder\ExamBrowserClient'   # Folder tempat ExamBrowser.exe berada
+$SearchDir = 'C:\Path\Folder'                     # Folder root pencarian jika path utama tidak ditemukan
 # ==========================================
 ```
 
@@ -157,9 +159,9 @@ $SearchDir = 'C:\Laboran Lab. DKV'                     # Folder root pencarian j
 
 ## 📜 Skrip Otomasi
 
-### Skrip 1: Buka & Auto-RUN ExamBrowser
+### Skrip 1A: Buka & Auto-RUN Standar (Tanpa Kamera)
 
-Daftarkan skrip ini di Action1 pada menu **Automation** > **Custom Scripts** dengan nama `Launch and Run ExamBrowser`.
+Daftarkan skrip ini di Action1 pada menu **Automation** > **Custom Scripts** dengan nama `Launch ExamBrowser (Standard)`. Gunakan untuk sesi ujian biasa yang tidak memerlukan pengawasan webcam.
 
 ```powershell
 # ==========================================
@@ -287,6 +289,162 @@ Write-Output "ExamBrowser dijalankan untuk $User"
 
 ---
 
+### Skrip 1B: Buka & Auto-RUN Khusus Webcam / Kamera Aktif
+
+Daftarkan skrip ini di Action1 pada menu **Automation** > **Custom Scripts** dengan nama `Launch ExamBrowser (with Webcam)`. Skrip ini secara otomatis mendeteksi hardware webcam dan menyetujui prompt izin *"merekam aktifitas"* (`Yes`/`Ya`) di samping mengklik tombol **RUN**.
+
+```powershell
+# ==========================================
+# KONFIGURASI DIREKTORI (SESUAIKAN DENGAN PC ANDA)
+# ==========================================
+$Dir       = 'C:\Path\Folder\ExamBrowserClient'   # Folder tempat ExamBrowser.exe berada
+$SearchDir = 'C:\Path\Folder'                     # Folder root pencarian jika path utama tidak ditemukan
+# ==========================================
+
+$Exe = Join-Path $Dir 'ExamBrowser.exe'
+
+if (-not (Test-Path $Exe)) {
+    $f = Get-ChildItem $SearchDir -Filter 'ExamBrowser.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $f) { Write-Output 'ExamBrowser.exe tidak ditemukan'; exit 1 }
+    $Exe = $f.FullName; $Dir = $f.DirectoryName
+}
+
+if (Get-Process -Name 'ExamBrowser' -ErrorAction SilentlyContinue) {
+    Write-Output 'ExamBrowser sudah berjalan'; exit 0
+}
+
+$User = (Get-CimInstance Win32_ComputerSystem).UserName
+if (-not $User) { Write-Output 'Tidak ada user yang login'; exit 1 }
+
+# Deteksi webcam (kamera terpasang dan aktif)
+$cam = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object {
+    $_.Status -eq 'OK' -and (
+        $_.Class -eq 'Camera' -or
+        ($_.Class -eq 'Image' -and $_.FriendlyName -match 'cam|video')
+    )
+}
+$HasCam = if ($cam) { 1 } else { 0 }
+
+$HelperDir  = 'C:\ProgramData\Action1Scripts'
+$HelperPath = Join-Path $HelperDir 'OpenExamBrowser.ps1'
+New-Item -ItemType Directory -Path $HelperDir -Force | Out-Null
+
+$helper = @'
+param($Exe, $Dir, $Webcam)
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+Add-Type @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public class W {
+  public delegate bool EP(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EP p, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr h, EP p, IntPtr l);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, int m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(int f, int dx, int dy, int d, int e);
+  public static void Click(int x, int y) {
+    SetCursorPos(x, y);
+    mouse_event(0x02, 0, 0, 0, 0);
+    mouse_event(0x04, 0, 0, 0, 0);
+  }
+  static bool Is(string s, string[] opts) {
+    foreach (var o in opts) if (s.Equals(o, StringComparison.OrdinalIgnoreCase)) return true;
+    return false;
+  }
+  public static bool ClickButton(string key, string labels) {
+    var opts = labels.Split('|');
+    bool done = false;
+    EnumWindows((h, l) => {
+      if (!IsWindowVisible(h)) return true;
+      var c = new StringBuilder(64); GetClassName(h, c, 64);
+      if (c.ToString() != "#32770") return true;
+      var title = new StringBuilder(256); GetWindowText(h, title, 256);
+      bool match = title.ToString().IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0;
+      IntPtr btn = IntPtr.Zero;
+      EnumChildWindows(h, (ch, l2) => {
+        var t = new StringBuilder(512); GetWindowText(ch, t, 512);
+        var cc = new StringBuilder(64); GetClassName(ch, cc, 64);
+        if (t.ToString().IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0) match = true;
+        if (cc.ToString() == "Button" && Is(t.ToString().Replace("&", "").Trim(), opts)) btn = ch;
+        return true;
+      }, IntPtr.Zero);
+      if (match && btn != IntPtr.Zero) {
+        SendMessage(btn, 0x00F5, IntPtr.Zero, IntPtr.Zero);
+        done = true; return false;
+      }
+      return true;
+    }, IntPtr.Zero);
+    return done;
+  }
+}
+"@
+
+$AE = [System.Windows.Automation.AutomationElement]
+function Click-Run($tries) {
+    $wins = $AE::RootElement.FindAll('Children', [System.Windows.Automation.Condition]::TrueCondition)
+    foreach ($w in $wins) {
+        if ($w.Current.Name -notmatch '(?i)exambrowser\s+client') { continue }
+        foreach ($b in $w.FindAll('Descendants', [System.Windows.Automation.Condition]::TrueCondition)) {
+            if ($b.Current.Name -match '^\s*RUN\s*$') {
+                $p = $null
+                if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$p)) {
+                    $p.Invoke()
+                } else {
+                    $r = $b.Current.BoundingRectangle
+                    [W]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+                }
+                return $true
+            }
+        }
+        if ($tries -ge 10) {
+            $r = $w.Current.BoundingRectangle
+            [W]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height * 0.90))
+            return $true
+        }
+    }
+    return $false
+}
+
+Start-Process -FilePath $Exe -WorkingDirectory $Dir
+
+# 1) Popup autoupdate -> OK, lalu klik RUN (1x)
+$popupDone = $false
+for ($i = 0; $i -lt 180; $i++) {
+    Start-Sleep -Seconds 1
+    if (-not $popupDone) { $popupDone = [W]::ClickButton('autoupdate', 'OK') }
+    if (Click-Run $i) { break }
+}
+
+# 2) Khusus PC dengan webcam: popup persetujuan merekam -> Yes
+if ($Webcam -eq 1) {
+    for ($j = 0; $j -lt 30; $j++) {
+        Start-Sleep -Seconds 1
+        if ([W]::ClickButton('merekam aktifitas', 'Yes|Ya')) { break }
+    }
+}
+'@
+Set-Content -Path $HelperPath -Value $helper -Encoding UTF8
+
+$Task     = 'Action1_OpenExamBrowser'
+$taskArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$HelperPath`" -Exe `"$Exe`" -Dir `"$Dir`" -Webcam $HasCam"
+$act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArgs
+$pri = New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Highest
+$set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+
+Unregister-ScheduledTask -TaskName $Task -Confirm:$false -ErrorAction SilentlyContinue
+Register-ScheduledTask -TaskName $Task -Action $act -Principal $pri -Settings $set | Out-Null
+Start-ScheduledTask -TaskName $Task
+
+$camInfo = if ($HasCam -eq 1) { "ada ($(($cam | Select-Object -First 1).FriendlyName))" } else { 'tidak ada' }
+Write-Output "ExamBrowser dijalankan untuk $User | Webcam: $camInfo"
+```
+
+---
+
 ### Skrip 2: Tutup Aman ExamBrowser (Ctrl+C+B)
 
 Daftarkan skrip ini di menu **Automation** > **Custom Scripts** dengan nama `Close ExamBrowser (Ctrl+C+B)`.
@@ -350,11 +508,12 @@ Write-Output "Ctrl+C+B dikirim ke sesi $User"
 2. Centang grup komputer target (misal: `Lab Komputer - Klien Ujian`).
 3. Klik tombol **Run Action** di bar atas > pilih **Run Script**.
 4. Pilih skrip yang dibutuhkan:
-   * **Saat Ujian Mulai**: Pilih `Launch and Run ExamBrowser`.
+   * **Saat Ujian Mulai (Standar)**: Pilih `Launch ExamBrowser (Standard)`.
+   * **Saat Ujian Mulai (Ujian Berkamera / SNBT / dll.)**: Pilih `Launch ExamBrowser (with Webcam)`.
    * **Saat Ujian Selesai**: Pilih `Close ExamBrowser (Ctrl+C+B)`.
 5. Klik **Run Now**.
 6. Pantau jendela status Action1:
-   * Hasil sukses buka: `ExamBrowser dijalankan untuk [NamaUser]`
+   * Hasil sukses buka: `ExamBrowser dijalankan untuk [NamaUser] | Webcam: [ada/tidak ada]`
    * Hasil sukses tutup: `Ctrl+C+B dikirim ke sesi [NamaUser]`
 
 ---
@@ -408,6 +567,7 @@ Write-Output "Perintah shutdown berhasil dibatalkan."
 | `Tidak ada user yang login` | Komputer klien masih berada di layar Lock Screen atau belum login Windows. | Pastikan siswa/proktor sudah login desktop sebelum aksi dijalankan. |
 | `ExamBrowser.exe tidak ditemukan` | Folder aplikasi tidak sesuai dengan path yang didefinisikan. | Periksa letak folder di komputer klien dan sesuaikan variabel `$Dir` atau `$SearchDir` di skrip. |
 | Tombol RUN tidak terklik otomatis | UI ExamBrowser merender lambat atau terhalang dialog lain. | Skrip memiliki batas tunggu hingga 180 detik dan otomatis beralih ke simulasi koordinat klik di detik ke-10. |
+| Pop-up izin kamera tidak terklik | Variasi bahasa Windows/ExamBrowser atau driver webcam telat siap. | Skrip versi 1B mendukung opsi `Yes` dan `Ya`, serta mencoba berulang selama 30 detik setelah klik RUN. |
 | Agent Action1 berstatus Offline | PC mati, jaringan LAN/internet lab putus, atau service terhenti. | Cek status service Windows `Action1 Agent` di client atau cek sambungan internet lab. |
 
 ---
